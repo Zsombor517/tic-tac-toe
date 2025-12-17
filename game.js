@@ -4,6 +4,7 @@ const prompt = promptSync({sigint: true});
 let board = getEmptyBoard();
 let playerTurn = 'x';
 let aiEnabled;
+
 while (true){
     console.log('1. Two player mode\n2.Play against ai')
     const input = prompt(); 
@@ -21,9 +22,11 @@ displayBoard(board);
 while (true){
     let coords;
     if (aiEnabled && playerTurn == 'o'){
+        console.log(getUnbeatableAiCoords(board));
         coords = getRandomAiCoords(board);
         board[coords[0]][coords[1]] = 'o';
         playerTurn = 'x';
+        console.log("Ai turn: ")
     }
     
     else if (playerTurn == 'x'){
@@ -50,7 +53,7 @@ while (true){
 }
 
 function getEmptyBoard(){
-    return [['.', '.', '.'], ['.', '.', '.'], ['.', '.', '.']];
+    return [['o', 'o', '.'], ['.', '.', '.'], ['.', '.', '.']];
 }
 
 function displayBoard(board){
@@ -85,7 +88,7 @@ function getHumanCoordinates(board, playerTurn){
         if (coords.toLowerCase() == 'quit'){
             return false;
         }
-        else if (!/^[a-cA-C1-3]+$/.test(coords)){
+        else if (!/^[a-cA-C][1-3]$/.test(coords)){
             console.log('Invalid move!');
         }
         else{
@@ -159,7 +162,6 @@ function getRandomAiCoords(board){
 
     while (true){
         let aiCoords = [Math.floor(Math.random() * 3), Math.floor(Math.random() * 3)];
-        console.log(aiCoords);
         if (board[aiCoords[0]][aiCoords[1]] == '.'){
             return aiCoords;
         }
@@ -167,5 +169,17 @@ function getRandomAiCoords(board){
 }
 
 function getUnbeatableAiCoords(board){
-   
+    let counter = 0;
+    for (const row of board){
+        if (row[0] == 'o'){
+            for (const column of row){
+                if (column == row[0]){
+                    counter++
+                    if (counter == 2){
+                        return [board.indexOf(row), row.indexOf(column)];
+                    }
+                }
+            }
+        }   
+    }
 }
