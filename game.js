@@ -4,9 +4,10 @@ const prompt = promptSync({ sigint: true });
 let board = getEmptyBoard();
 let playerTurn = 'x';
 let aiEnabled;
+let aiVsAi = false;
 
 while (true) {
-    console.log('1. Two player mode\n2.Play against ai')
+    console.log('1. Two player mode\n2.Play against ai\n3. ai vs ai')
     const input = prompt();
     if (input == 1) {
         break;
@@ -15,39 +16,54 @@ while (true) {
         aiEnabled = true;
         break;
     }
-    console.log("Enter either 1 or 2");
+    else if (input == 3) {
+        aiVsAi = true;
+        aiEnabled = true;
+        break;
+    }
+    console.log("Enter either 1, 2 or 3");
 }
-displayBoard(board);
-
 while (true) {
     let coords;
-    if (aiEnabled && playerTurn == 'o') {
-        console.log(getUnbeatableAiCoords(board));
-        coords = getUnbeatableAiCoords(board);
-        board[coords[0]][coords[1]] = 'o';
-        playerTurn = 'x';
-        console.log("Ai turn: ")
+
+    if (isBoardFull(board)) {
+        break;
     }
 
-    else if (playerTurn == 'x') {
+    if (aiEnabled) {
+        if (!aiVsAi && playerTurn == 'o') {
+            coords = getUnbeatableAiCoords(board);
+            board[coords[0]][coords[1]] = playerTurn;
+            console.log("Ai turn: ")
+            playerTurn = 'x';
+        }
+
+        if (aiVsAi) {
+            coords = getUnbeatableAiCoords(board);
+            board[coords[0]][coords[1]] = playerTurn;
+            playerTurn = (playerTurn == 'x') ? 'o' : 'x';
+        }
+    }
+    displayBoard(board);
+    if (playerTurn == 'x' && !aiVsAi) {
         coords = getHumanCoordinates(board, playerTurn);
         if (!coords) { break; }
-        board[coords[0]][coords[1]] = 'x';
+        board[coords[0]][coords[1]] = playerTurn;
         playerTurn = 'o';
     }
     else if (!aiEnabled && playerTurn == 'o') {
         coords = getHumanCoordinates(board, playerTurn);
         if (!coords) { break; }
-        board[coords[0]][coords[1]] = 'o';
+        board[coords[0]][coords[1]] = playerTurn;
         playerTurn = 'x';
     }
     displayBoard(board);
-    if (isBoardFull(board)) {
-        console.log('Tie!');
-        break;
-    }
     if (getWinner(board)) {
         console.log(`The winners is ${getWinner(board)}`);
+        break;
+    }
+    if (isBoardFull(board)) {
+        console.log('Tie!');
         break;
     }
 }
@@ -109,6 +125,7 @@ function isBoardFull(board) {
         }
     }
     if (fullRowCounter == 3) {
+        //console.log('Tie!')
         return true;
     }
     return false;
@@ -125,7 +142,6 @@ function getWinner(board) {
         }
     }
     //three in a column
-
     let xCount = 0;
     let oCount = 0;
     for (let i = 0; i <= board.length; i++) {
@@ -160,27 +176,83 @@ function getWinner(board) {
 }
 function getRandomAiCoords(board) {
 
-    while (true) {
-        let aiCoords = [Math.floor(Math.random() * 3), Math.floor(Math.random() * 3)];
-        if (board[aiCoords[0]][aiCoords[1]] == '.') {
-            return aiCoords;
+    const emptyCoords = [];
+
+    for (let i = 0; i < 3; i++) {
+        for (let j = 0; j < 3; j++) {
+            if (board[i][j] === '.') {
+                emptyCoords.push([i, j]);
+            }
         }
+    }
+
+    if (emptyCoords.length === 0) {
+        return null;
+    }
+    const randomIndex = Math.floor(Math.random() * emptyCoords.length);
+    return emptyCoords[randomIndex];
+}
+
+function minimax(board, depth, isMaximizing) {
+    let winner = getWinner(board);
+
+    if (winner === 'o') return 10 - depth; // AI wins
+    if (winner === 'x') return depth - 10; // Human wins
+    if (isBoardFull(board)) return 0;      // Draw
+
+    if (isMaximizing) {
+        let bestScore = -Infinity;
+
+        for (let i = 0; i < 3; i++) {
+            for (let j = 0; j < 3; j++) {
+                if (board[i][j] === '.') {
+                    board[i][j] = 'o';
+                    let score = minimax(board, depth + 1, false);
+                    board[i][j] = '.';
+                    bestScore = Math.max(score, bestScore);
+                }
+            }
+        }
+
+        return bestScore;
+    } else {
+        let bestScore = Infinity;
+
+        for (let i = 0; i < 3; i++) {
+            for (let j = 0; j < 3; j++) {
+                if (board[i][j] === '.') {
+                    board[i][j] = 'x';
+                    let score = minimax(board, depth + 1, true);
+                    board[i][j] = '.';
+                    bestScore = Math.min(score, bestScore);
+                }
+            }
+        }
+
+        return bestScore;
     }
 }
 
 function getUnbeatableAiCoords(board) {
+
+    let bestScore = -Infinity;
+    let bestMove = null;
+
     for (let i = 0; i < 3; i++) {
         for (let j = 0; j < 3; j++) {
             if (board[i][j] == '.') {
                 board[i][j] = 'o';
-                if (getWinner(board) == 'o') {
-                    board[i][j] = '.';
-                    return [i, j];
-                }
+                let score = minimax(board, 0, false);
                 board[i][j] = '.';
+
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestMove = [i, j];
+                }
             }
         }
     }
+
     for (let i = 0; i < 3; i++) {
         for (let j = 0; j < 3; j++) {
             if (board[i][j] == ".") {
@@ -195,3 +267,4 @@ function getUnbeatableAiCoords(board) {
     }
     return getRandomAiCoords(board);
 }
+
